@@ -1,10 +1,26 @@
 using UnityEngine;
 
-public class RandomMatchmaker : Photon.PunBehaviour
+public delegate void PlayerJoined(string playerName);
+
+
+public sealed class LobbyManager : Photon.PunBehaviour
 {
+    public static LobbyManager Instance { get; private set; }
+
+    #region Events
+    public static event PlayerJoined OnPlayerJoined;
+    #endregion
+    
     private PhotonView myPhotonView;
 
-    // Use this for initialization
+
+    private void Awake() 
+    {
+        if(Instance != null)
+            Destroy(Instance.gameObject);
+
+        Instance = this;
+    }
     public void Start()
     {
         PhotonNetwork.ConnectUsingSettings("0.1");
@@ -32,6 +48,12 @@ public class RandomMatchmaker : Photon.PunBehaviour
         GameObject monster = PhotonNetwork.Instantiate("monsterprefab", Vector3.zero, Quaternion.identity, 0);
         monster.GetComponent<myThirdPersonController>().isControllable = true;
         myPhotonView = monster.GetComponent<PhotonView>();
+
+        // Raise the player joined event with the player's name
+        if (OnPlayerJoined != null)
+        {
+            OnPlayerJoined(PhotonNetwork.playerName);
+        }
     }
 
     public void OnGUI()
