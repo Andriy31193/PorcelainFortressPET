@@ -1,5 +1,8 @@
 public enum EntityType
 {
+    Void = 0,
     Wall = 1,
-    Rotator = 3
+    Hole = 9,
+    RotateLeft = 10,
+    RotateRight = 11,
 }

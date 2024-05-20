@@ -9,8 +9,6 @@ public class GameManager : Photon.PunBehaviour
     // Y = 0 forward
     // Y = 180 backward
 
-    [SerializeField] GameObject arrow;
-
     private MazeGenerator _generator;
     private void Awake()
     {

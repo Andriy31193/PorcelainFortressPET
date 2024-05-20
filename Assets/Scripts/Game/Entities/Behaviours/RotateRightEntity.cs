@@ -1,11 +1,11 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "RotatorEntity", menuName = "Entities/RotatorEntity")]
-public sealed class RotatorEntity : Entity
+[CreateAssetMenu(fileName = "RotateRight", menuName = "Entities/RotateRight")]
+public sealed class RotateRightEntity : Entity
 {
     private Direction _direction = Direction.None;
 
-    public RotatorEntity() => Type = EntityType.Rotator;
+    public RotateRightEntity() => Type = EntityType.RotateRight;
     public void SetDirection(Direction direction) => _direction = direction;
 
     public override void Affect()

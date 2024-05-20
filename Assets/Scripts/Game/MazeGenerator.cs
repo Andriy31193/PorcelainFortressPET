@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using Map = GameSettings.Map;
@@ -16,6 +17,7 @@ public class MazeGenerator : Photon.PunBehaviour
         Vector2Int.left
     };
     private byte[,] _maze;
+    private Dictionary<KeyValuePair<byte, byte>, GameObject> _3dMaze;
     private void Awake()
     {
         if (Instance != null)
@@ -25,7 +27,20 @@ public class MazeGenerator : Photon.PunBehaviour
     }
     public void Generate()
     {
+        GenerateMaze();
+        GenerateChallenges();
+
+        byte[] mazeData = new byte[Map.Rows * Map.Columns];
+        Buffer.BlockCopy(_maze, 0, mazeData, 0, _maze.Length);
+
+        PhotonView photonView = PhotonView.Get(this);
+        photonView.RPC("OnReceiveMazeData", PhotonTargets.AllBuffered, mazeData);
+    }
+    private void GenerateMaze()
+    {
         _maze = new byte[Map.Rows, Map.Columns];
+
+
         Vector2Int current = new(0, 0);
         _stack.Push(current);
         _maze[current.x, current.y] = (byte)EntityType.Wall;
@@ -45,20 +60,36 @@ public class MazeGenerator : Photon.PunBehaviour
             }
         }
 
-        byte[] mazeData = new byte[Map.Rows * Map.Columns];
-        Buffer.BlockCopy(_maze, 0, mazeData, 0, _maze.Length);
-
-        PhotonView photonView = PhotonView.Get(this);
-        photonView.RPC("OnReceiveMazeData", PhotonTargets.AllBuffered, mazeData);
+        for (int row = 0; row < Map.Rows; row++)
+        {
+            for (int col = 0; col < Map.Columns; col++)
+            {
+                if (row == 0 || row == Map.Rows - 1 || col == 0 || col == Map.Columns - 1)
+                {
+                    _maze[row, col] = (byte)EntityType.Wall;
+                }
+            }
+        }
+        _maze[0, 1] = (byte)EntityType.Void;
     }
 
+    private void GenerateChallenges()
+    {
+        for (byte i = 0; i < 10; i++)
+        {
+            Entity randomChallenge = EntitiesCollection.Instance.GetRandomEntitity(ignore: EntityType.Wall);
+            _maze[UnityEngine.Random.Range(1, (int)Map.Rows -1), (int)UnityEngine.Random.Range(1, Map.Columns -1)] = (byte)randomChallenge.Type;
+
+        }
+    }
     private List<Vector2Int> GetUnvisitedNeighbors(Vector2Int cell)
     {
-        List<Vector2Int> neighbors = new List<Vector2Int>();
+        List<Vector2Int> neighbors = new();
 
         foreach (var direction in _directions)
         {
             Vector2Int neighbor = cell + direction * 2;
+
             if (IsInBounds(neighbor) && _maze[neighbor.x, neighbor.y] == 0)
             {
                 neighbors.Add(neighbor);
@@ -79,30 +110,54 @@ public class MazeGenerator : Photon.PunBehaviour
 
     private void BuildMaze(byte[,] data)
     {
-
-        for (int row = 0; row < data.GetLength(0); row++)
+        _3dMaze = new Dictionary<KeyValuePair<byte, byte>, GameObject>();
+        for (byte row = 0; row < data.GetLength(0); row++)
         {
-            for (int column = 0; column < data.GetLength(1); column++)
+            for (byte column = 0; column < data.GetLength(1); column++)
             {
-                if (data[row, column] == 1)
-                    HandleCreation(data[row, column], new Vector3(-4.5f + row, 0.5f, 4.5f - column));
+
+                var entity = HandleCreation(data[row, column], new Vector3(-4.5f + column, 0.5f, 4.5f - row));
+
+                _3dMaze.Add(new KeyValuePair<byte, byte>(row, column), entity);
             }
         }
     }
-    public void HandleCreation(byte entityType, Vector3 position)
+    public GameObject HandleCreation(byte entityType, Vector3 position)
     {
-        Entity entity = EntitiesCollection.Instance.GetEntitity((EntityType)entityType);
-        entity.Affect();
-        switch  ((EntityType)entityType)
+        //Entity entity = EntitiesCollection.Instance.GetEntitity((EntityType)entityType);
+        string path = string.Empty;
+
+        switch ((EntityType)entityType)
         {
+            case EntityType.Hole:
+                path = "Entities/Traps/Hole";
+                break;
             case EntityType.Wall:
-                GameObject newCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                newCube.transform.position = position;
-            break;
+                path = "Entities/Neutral/Wall";
+                break;
         }
 
-    }
+        if (!string.IsNullOrEmpty(path))
+        {
+            GameObject entity = Resources.Load<GameObject>(path);
 
+            if (entity != null)
+            {
+                return Instantiate(entity, position, entity.transform.rotation);
+            }
+        }
+        return null;
+    }
+    public void ModifyEntitiy(byte row, byte column, EntityType newEntity)
+    {
+        var d3Object = _3dMaze.FirstOrDefault(x => x.Key.Key == row && x.Key.Value == column);
+        if (d3Object.Value != null)
+        {
+            _maze[row, column] = (byte)newEntity;
+            Destroy(_3dMaze[d3Object.Key]);
+            _3dMaze[d3Object.Key] = null;
+        }
+    }
 
     [PunRPC]
     public void OnReceiveMazeData(byte[] data)
@@ -116,5 +171,7 @@ public class MazeGenerator : Photon.PunBehaviour
         _maze = new byte[Map.Rows, Map.Columns];
         Buffer.BlockCopy(data, 0, _maze, 0, data.Length);
         BuildMaze(_maze);
+        BoardUIBuilder.Instance.Build(_maze);
+
     }
 }
