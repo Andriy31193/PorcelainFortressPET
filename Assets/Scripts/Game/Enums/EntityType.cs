@@ -1,4 +1,5 @@
 public enum EntityType
 {
-    Left = 1
+    Wall = 1,
+    Rotator = 3
 }

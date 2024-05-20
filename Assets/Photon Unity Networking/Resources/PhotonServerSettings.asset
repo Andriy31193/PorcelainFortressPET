@@ -43,4 +43,9 @@ MonoBehaviour:
   - RequestForPickupItems
   - RequestForPickupTimes
   - TaggedPlayer
+  - IN_DestroyRPC
+  - IN_InstantiateRPC
+  - IN_SendCallbackRPC
+  - IN_UploadNewPropertiesRPC
+  - OnReceiveMazeData
   DisableAutoOpenWizard: 1
