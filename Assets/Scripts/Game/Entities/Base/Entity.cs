@@ -1,10 +1,19 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public abstract class Entity : ScriptableObject
 {
     public EntityType Type { get; protected set; }
-    protected Transform Player => PlayerController.Instance.transform;
+    
+    [SerializeField] private string _prefabPath = string.Empty;
+    [SerializeField] protected List<EntityProperty> _customProperties;
 
 
-    public abstract void Affect();
+
+    public string GetPrefabPath() => _prefabPath; 
+
+    
+    
+    
+    public abstract void Affect(IPlayer player);
 }

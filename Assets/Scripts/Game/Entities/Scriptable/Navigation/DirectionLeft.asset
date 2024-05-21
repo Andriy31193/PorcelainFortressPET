@@ -10,5 +10,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d15efc5af5d503244835a68ec1c0c37e, type: 3}
-  m_Name: RotateLeft
+  m_Name: DirectionLeft
   m_EditorClassIdentifier: 
+  _prefabPath: Entities/Navigation/ArrowLeft
