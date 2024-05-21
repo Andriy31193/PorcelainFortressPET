@@ -7,7 +7,6 @@ using Map = GameSettings.Map;
 
 public class MazeBuilder : Photon.PunBehaviour
 {
-    public static MazeBuilder Instance { get; private set; }
     private readonly Stack<Vector2Int> _stack = new();
     private readonly List<Vector2Int> _directions = new()
     {
@@ -18,17 +17,27 @@ public class MazeBuilder : Photon.PunBehaviour
     };
     private byte[,] _maze;
     private Dictionary<KeyValuePair<byte, byte>, GameObject> _3dMaze;
+
+
+    private EntitiesCollection _entitiesCollection;
+
     private void Awake()
     {
-        if (Instance != null)
-            Destroy(Instance.gameObject);
-
-        Instance = this;
+        DIContainer.Register(this);
+    }
+    private void Start() {
+        GameManager.OnMazeDataReceived += OnMazeDataReceived;
+    }
+    private void OnMazeDataReceived(byte[,] data)
+    {
+        Build3DMaze(data);
     }
     public void Generate(Action<byte[]> onMazeGenerated)
     {
+        _entitiesCollection = DIContainer.Resolve<EntitiesCollection>();
+
         GenerateMaze();
-        GenerateChallenges();
+        //GenerateChallenges();
 
         byte[] mazeData = new byte[Map.Rows * Map.Columns];
         Buffer.BlockCopy(_maze, 0, mazeData, 0, _maze.Length);
@@ -40,24 +49,29 @@ public class MazeBuilder : Photon.PunBehaviour
         _maze = new byte[Map.Rows, Map.Columns];
 
 
-        Vector2Int current = new(0, 0);
-        _stack.Push(current);
-        _maze[current.x, current.y] = (byte)EntityType.Wall;
+        // Vector2Int current = new(0, 0);
+        // _stack.Push(current);
+        // _maze[current.x, current.y] = (byte)EntityType.Wall;
 
-        while (_stack.Count > 0)
-        {
-            current = _stack.Pop();
-            List<Vector2Int> neighbors = GetUnvisitedNeighbors(current);
+        // while (_stack.Count > 0)
+        // {
+        //     current = _stack.Pop();
+        //     List<Vector2Int> neighbors = GetUnvisitedNeighbors(current);
 
-            if (neighbors.Count > 0)
-            {
-                _stack.Push(current);
-                Vector2Int chosen = neighbors[UnityEngine.Random.Range(0, neighbors.Count)];
-                RemoveWall(current, chosen);
-                _maze[chosen.x, chosen.y] = (byte)EntityType.Wall;
-                _stack.Push(chosen);
-            }
-        }
+        //     if (neighbors.Count > 0)
+        //     {
+        //         _stack.Push(current);
+        //         Vector2Int chosen = neighbors[UnityEngine.Random.Range(0, neighbors.Count)];
+        //         RemoveWall(current, chosen);
+        //         _maze[chosen.x, chosen.y] = (byte)EntityType.Wall;
+        //         _stack.Push(chosen);
+        //     }
+        // }
+
+        _maze[4, 1] = (byte)EntityType.DirectionRight;    
+        _maze[4, 5] = (byte)EntityType.DirectionRight;    
+        _maze[1, 5] = (byte)EntityType.DirectionRight;   
+
 
         for (int row = 0; row < Map.Rows; row++)
         {
@@ -76,7 +90,7 @@ public class MazeBuilder : Photon.PunBehaviour
     {
         for (byte i = 0; i < 10; i++)
         {
-            Entity randomChallenge = EntitiesCollection.Instance.GetRandomEntitity(ignore: EntityType.Wall);
+            Entity randomChallenge = _entitiesCollection.GetRandomEntitity(EntityType.Wall, EntityType.DirectionLeft);
             _maze[UnityEngine.Random.Range(1, (int)Map.Rows -1), (int)UnityEngine.Random.Range(1, Map.Columns -1)] = (byte)randomChallenge.Type;
 
         }
@@ -126,7 +140,7 @@ public class MazeBuilder : Photon.PunBehaviour
             return null;
 
 
-        Entity entity = EntitiesCollection.Instance.GetEntitity(entityType);
+        Entity entity = _entitiesCollection.GetEntitity(entityType);
 
         if (entity != null && !string.IsNullOrEmpty(entity.GetPrefabPath()))
         {
@@ -149,5 +163,9 @@ public class MazeBuilder : Photon.PunBehaviour
             Destroy(_3dMaze[d3Object.Key]);
             _3dMaze[d3Object.Key] = null;
         }
+    }
+
+    private void OnDestroy() {
+        GameManager.OnMazeDataReceived -= OnMazeDataReceived;
     }
 }

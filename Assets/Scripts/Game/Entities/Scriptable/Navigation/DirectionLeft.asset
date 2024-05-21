@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: DirectionLeft
   m_EditorClassIdentifier: 
   _prefabPath: Entities/Navigation/ArrowLeft
+  _customProperties: []

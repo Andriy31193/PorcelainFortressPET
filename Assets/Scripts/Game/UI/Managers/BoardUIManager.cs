@@ -1,35 +1,30 @@
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
-public delegate void OnUIEntityChange(byte entity, byte row, byte column);
-public sealed class BoardUIBuilder : MonoBehaviour
-{
-    public static BoardUIBuilder Instance { get; private set; }
 
+public delegate void OnUIEntityChange(byte entity, byte row, byte column);
+public sealed class BoardUIManager : MonoBehaviour
+{
     public static OnUIEntityChange OnUIEntityChange { get; set; }
 
     [SerializeField] private GridLayoutGroup _boardParent;
-    [SerializeField] private HorizontalLayoutGroup _toolsParent;
 
-    private GameObject _boardCellPrefab = null;
-    private GameObject _toolCellPrefab = null;
     private Dictionary<Vector2Int, KeyValuePair<EntityType, GameObject>> _uiMaze = new();
+    private GameManager _gameManager;
+
     private void Awake()
     {
-        if (Instance != null)
-            Destroy(Instance.gameObject);
-
-        Instance = this;
+        DIContainer.Register(this);
     }
+
     private void Start()
     {
-        _boardCellPrefab = Resources.Load<GameObject>("UI/BoardCell");
-        _toolCellPrefab = Resources.Load<GameObject>("UI/ChallengeTool");
+        GameManager.OnMazeDataReceived += CreateBoard;  
     }
+
     public void OnRemoveCell(byte row, byte column)
     {
         OnUIEntityChange?.Invoke(0, row, column);
@@ -72,26 +67,14 @@ public sealed class BoardUIBuilder : MonoBehaviour
         cell.GetComponent<Image>().color = color;
         cell.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = row + "," + column + "(" + entityType.ToString() + ")";
     }
-    public void Build(byte[,] board)
+
+    private void CreateBoard(byte[,] board)
     {
         _boardParent.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         _boardParent.constraintCount = board.GetLength(0) - 1;
 
+        _uiMaze = BoardUIBuilder.Build(board, _boardParent);
 
-        for (byte row = 0; row < board.GetLength(0); row++)
-        {
-            for (byte column = 0; column < board.GetLength(1); column++)
-            {
-                EntityType currentEntityType = (EntityType)board[row, column];
-                Vector2Int currentPosition = new(row, column);
-
-                GameObject cell = Instantiate(_boardCellPrefab, _boardParent.transform);
-                KeyValuePair<EntityType, GameObject> key = new(currentEntityType, cell);
-                _uiMaze.Add(currentPosition, key);
-            }
-        }
-
-        RefreshBoard(board, ignoreNewTypes: true);
+        RefreshBoard(board, true);
     }
-
 }

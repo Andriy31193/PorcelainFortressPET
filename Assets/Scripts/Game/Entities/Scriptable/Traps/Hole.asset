@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec0278f5744766a48acc9524daa8c261, type: 3}
   m_Name: Hole
   m_EditorClassIdentifier: 
-  _prefabPath: Entities/Traps/Hole
+  _prefabPath: 
+  _customProperties: []

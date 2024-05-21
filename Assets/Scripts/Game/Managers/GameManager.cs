@@ -1,43 +1,48 @@
 using System;
+using UnityEditor.UI;
 using UnityEngine;
 using Map = GameSettings.Map;
-public delegate void OnPlayerMoved(IPlayer player);
+
+public delegate void OnPlayerMoved(IPlayer player, byte x, byte z);
 
 [RequireComponent(typeof(MazeBuilder))]
-
 public class GameManager : Photon.PunBehaviour
 {
-    public static GameManager Instance { get; private set; }
+    public static event Action<byte[,]> OnMazeDataReceived;
+    public static OnPlayerMoved OnPlayerMoved { get; private set;}
 
-    public static OnPlayerMoved OnPlayerMoved { get; set; }
-
-    // Y = 90 right
-    // Y = -90 left
-    // Y = 0 forward
-    // Y = 180 backward
+    private byte[,] _maze;
 
     private MazeBuilder _mazeBuilder;
-    private byte[,] _maze;
+    private BoardUIManager _boardUIBuilder;
+    private GameUIControl _gameUIControl;
+    private EntitiesCollection _entitiesCollection;
+    private IPlayer _localPlayer;
+
+
+
     private void Awake()
     {
-        OnPlayerMoved += OnIPlayerMovedEvent;
-        BoardUIBuilder.OnUIEntityChange += OnUIEntityChangeEvent;
-
-        _mazeBuilder = GetComponent<MazeBuilder>();
-
-        if (Instance != null)
-            Destroy(Instance.gameObject);
-
-        Instance = this;
+        DIContainer.Register(this);
     }
     private void Start()
     {
+        _boardUIBuilder = DIContainer.Resolve<BoardUIManager>();
+        _mazeBuilder = DIContainer.Resolve<MazeBuilder>();
+        _entitiesCollection = DIContainer.Resolve<EntitiesCollection>();
+        _gameUIControl = DIContainer.Resolve<GameUIControl>();
+        _localPlayer = DIContainer.Resolve<IPlayer>();
 
+        OnPlayerMoved += OnIPlayerMovedEvent;
+
+        BoardUIManager.OnUIEntityChange += OnUIEntityChangeEvent;
+        GameUIControl.OnStartButtonPressed += OnUIStartPressed;
+        GameUIControl.OnStopButtonPressed += OnUIStopPressed;
     }
     public void SetMazeEntity(byte entity, byte row, byte column)
     {
         _maze[row, column] = entity;
-        BoardUIBuilder.Instance.RefreshBoard(_maze);
+        _boardUIBuilder.RefreshBoard(_maze);
     }
     public bool TryMovePlayerOnMaze(byte row, byte column)
     {
@@ -45,35 +50,47 @@ public class GameManager : Photon.PunBehaviour
         if ((EntityType)_maze[row, column] == EntityType.Wall)
             return false;
 
-        SetMazeEntity(255, row, column);
-
         return true;
     }
-    private void OnIPlayerMovedEvent(IPlayer player)
+    public void HandleCreation(EntityType type, byte row, byte column, Vector3 position)
     {
-        Debug.Log("moved");
+        _mazeBuilder.HandleCreation(type, position);
+        SetMazeEntity((byte)type, row, column);
     }
-    public void HandleCreation(Vector3 position)
-    {
-        GameObject newCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        newCube.transform.position = position;
-    }
-    public void OnMazeGenerated(byte[] data)
+    private void OnMazeGenerated(byte[] data)
     {
         photonView.RPC(nameof(OnReceiveMazeData), PhotonTargets.AllBuffered, data);
     }
+    private void OnIPlayerMovedEvent(IPlayer player, byte x, byte z)
+    {
+        var entity = _entitiesCollection.GetEntitity((EntityType)_maze[x, z]);
+
+        if (entity != null)
+            entity.Affect(player);
+
+        SetMazeEntity(255, x, z);
+    }
     public void OnUIEntityChangeEvent(byte entity, byte row, byte column)
     {
-        MazeBuilder.Instance.ModifyEntitiy(row, column, EntityType.Void);
+        _mazeBuilder.ModifyEntitiy(row, column, EntityType.Void);
         SetMazeEntity(0, row, column);
     }
-    #region Mono
-    private void OnDestroy() 
+    public void OnUIStartPressed()
     {
-        BoardUIBuilder.OnUIEntityChange -= OnUIEntityChangeEvent;
+        _localPlayer.StartMovement();
+    }
+    public void OnUIStopPressed()
+    {
+        _localPlayer.StopMovement();
+    }
+    #region Mono
+    private void OnDestroy()
+    {
+        BoardUIManager.OnUIEntityChange -= OnUIEntityChangeEvent;
     }
     #endregion
     #region Photon Messages
+    
     public override void OnJoinedRoom()
     {
         if (PhotonNetwork.inRoom && PhotonNetwork.isMasterClient)
@@ -96,10 +113,7 @@ public class GameManager : Photon.PunBehaviour
 
         Buffer.BlockCopy(data, 0, _maze, 0, data.Length);
 
-        _mazeBuilder.Build3DMaze(_maze);
-        BoardUIBuilder.Instance.Build(_maze);
-
-        PlayerController.Instance.StartMovement();
+        OnMazeDataReceived?.Invoke(_maze);
     }
     #endregion
 }
