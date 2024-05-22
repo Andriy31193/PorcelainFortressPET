@@ -17,7 +17,7 @@ public class MazeBuilder : Photon.PunBehaviour
     };
     private byte[,] _maze;
     private Dictionary<KeyValuePair<byte, byte>, GameObject> _3dMaze;
-
+    private List<GameObject> _customCreations = new();
 
     private EntitiesCollection _entitiesCollection;
 
@@ -25,7 +25,8 @@ public class MazeBuilder : Photon.PunBehaviour
     {
         DIContainer.Register(this);
     }
-    private void Start() {
+    private void Start()
+    {
         GameManager.OnMazeDataReceived += OnMazeDataReceived;
     }
     private void OnMazeDataReceived(byte[,] data)
@@ -37,7 +38,7 @@ public class MazeBuilder : Photon.PunBehaviour
         _entitiesCollection = DIContainer.Resolve<EntitiesCollection>();
 
         GenerateMaze();
-        //GenerateChallenges();
+
 
         byte[] mazeData = new byte[Map.Rows * Map.Columns];
         Buffer.BlockCopy(_maze, 0, mazeData, 0, _maze.Length);
@@ -47,7 +48,7 @@ public class MazeBuilder : Photon.PunBehaviour
     private void GenerateMaze()
     {
         _maze = new byte[Map.Rows, Map.Columns];
-
+        GenerateChallenges();
 
         // Vector2Int current = new(0, 0);
         // _stack.Push(current);
@@ -68,32 +69,32 @@ public class MazeBuilder : Photon.PunBehaviour
         //     }
         // }
 
-        _maze[4, 1] = (byte)EntityType.DirectionRight;    
-        _maze[4, 5] = (byte)EntityType.DirectionRight;    
-        _maze[1, 5] = (byte)EntityType.DirectionRight;   
+        
 
 
-        for (int row = 0; row < Map.Rows; row++)
-        {
-            for (int col = 0; col < Map.Columns; col++)
-            {
-                if (row == 0 || row == Map.Rows - 1 || col == 0 || col == Map.Columns - 1)
-                {
-                    _maze[row, col] = (byte)EntityType.Wall;
-                }
-            }
-        }
-        _maze[0, 1] = (byte)EntityType.Void;
+        // for (int row = 0; row < Map.Rows; row++)
+        // {
+        //     for (int col = 0; col < Map.Columns; col++)
+        //     {
+        //         if (row == 0 || row == Map.Rows - 1 || col == 0 || col == Map.Columns - 1)
+        //         {
+        //             _maze[row, col] = (byte)EntityType.Wall;
+        //         }
+        //     }
+        // }
+        _maze[9, 1] = (byte)EntityType.Void;
     }
 
     private void GenerateChallenges()
     {
+
         for (byte i = 0; i < 10; i++)
         {
-            Entity randomChallenge = _entitiesCollection.GetRandomEntitity(EntityType.Wall, EntityType.DirectionLeft);
-            _maze[UnityEngine.Random.Range(1, (int)Map.Rows -1), (int)UnityEngine.Random.Range(1, Map.Columns -1)] = (byte)randomChallenge.Type;
+            Entity randomChallenge = DIContainer.Resolve<EntitiesCollection>().GetRandomEntitity(EntityType.Finish, EntityType.DirectionLeft, EntityType.DirectionRight);
+            _maze[UnityEngine.Random.Range(1, (int)Map.Rows - 1), (int)UnityEngine.Random.Range(1, Map.Columns - 1)] = (byte)randomChallenge.Type;
 
         }
+        _maze[UnityEngine.Random.Range(1, (int)Map.Rows - 1), (int)UnityEngine.Random.Range(1, Map.Columns - 1)] = (byte)EntityType.Finish;
     }
     private List<Vector2Int> GetUnvisitedNeighbors(Vector2Int cell)
     {
@@ -119,16 +120,23 @@ public class MazeBuilder : Photon.PunBehaviour
     }
 
     private bool IsInBounds(Vector2Int position) => position.x >= 0 && position.x < Map.Rows && position.y >= 0 && position.y < Map.Columns;
-
-
+    private void ClearCustomCreations()
+    {
+        _customCreations.ForEach(x => Destroy(x));
+        _customCreations.Clear();
+    }
     public void Build3DMaze(byte[,] data)
     {
+        ClearCustomCreations();
+
+        //Buffer.BlockCopy(data, 0, _maze, 0, _maze.Length);
+
         _3dMaze = new Dictionary<KeyValuePair<byte, byte>, GameObject>();
         for (byte row = 0; row < data.GetLength(0); row++)
         {
             for (byte column = 0; column < data.GetLength(1); column++)
             {
-                var entity = HandleCreation((EntityType)data[row, column], new Vector3(-4.5f + column, 0.5f, 4.5f - row));
+                var entity = HandleCreation((EntityType)data[row, column], MazeUtility.MatrixTo3DPosition(row, column));
 
                 _3dMaze.Add(new KeyValuePair<byte, byte>(row, column), entity);
             }
@@ -136,11 +144,11 @@ public class MazeBuilder : Photon.PunBehaviour
     }
     public GameObject HandleCreation(EntityType entityType, Vector3 position)
     {
-        if(entityType == EntityType.Void)
+        if (entityType == EntityType.Void)
             return null;
 
 
-        Entity entity = _entitiesCollection.GetEntitity(entityType);
+        Entity entity = DIContainer.Resolve<EntitiesCollection>().GetEntitity(entityType);
 
         if (entity != null && !string.IsNullOrEmpty(entity.GetPrefabPath()))
         {
@@ -150,22 +158,41 @@ public class MazeBuilder : Photon.PunBehaviour
             {
                 return Instantiate(creation, position, creation.transform.rotation);
             }
-            else Debug.LogError($"Resource with path: { entity.GetPrefabPath() } was not found.");
+            else Debug.LogError($"Resource with path: {entity.GetPrefabPath()} was not found.");
         }
         return null;
     }
     public void ModifyEntitiy(byte row, byte column, EntityType newEntity)
     {
-        var d3Object = _3dMaze.FirstOrDefault(x => x.Key.Key == row && x.Key.Value == column);
-        if (d3Object.Value != null)
+        if(_3dMaze == null)
+            return;
+
+        var key = new KeyValuePair<byte, byte>(row, column);
+        if (_3dMaze.TryGetValue(key, out GameObject d3Object))
         {
-            _maze[row, column] = (byte)newEntity;
-            Destroy(_3dMaze[d3Object.Key]);
-            _3dMaze[d3Object.Key] = null;
+            GameObject go = HandleCreation(newEntity, MazeUtility.MatrixTo3DPosition(row, column));
+
+            if (go != null)
+            {
+                _customCreations.Add(go);
+
+                if(_3dMaze[key] != null)
+                    Destroy(_3dMaze[key]);
+            }
+
+            //_maze[row, column] = (byte)newEntity;
+            _3dMaze[key] = go;
+
+            if (newEntity == EntityType.Void && d3Object != null)
+            {
+                Destroy(d3Object);
+                _3dMaze[key] = null;
+            }
         }
     }
 
-    private void OnDestroy() {
+    private void OnDestroy()
+    {
         GameManager.OnMazeDataReceived -= OnMazeDataReceived;
     }
 }

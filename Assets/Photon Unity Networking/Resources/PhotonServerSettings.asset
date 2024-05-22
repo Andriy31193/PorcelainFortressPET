@@ -48,4 +48,6 @@ MonoBehaviour:
   - IN_SendCallbackRPC
   - IN_UploadNewPropertiesRPC
   - OnReceiveMazeData
+  - UpdateServerTimeRPC
+  - ProcessWinner
   DisableAutoOpenWizard: 1

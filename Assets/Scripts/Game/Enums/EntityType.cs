@@ -6,4 +6,5 @@ public enum EntityType
     DirectionLeft = 201,
     DirectionRight = 202,
     Player = 255,
+    Finish = 250,
 }

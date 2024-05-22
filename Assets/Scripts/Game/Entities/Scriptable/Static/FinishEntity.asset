@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ec0278f5744766a48acc9524daa8c261, type: 3}
-  m_Name: Hole
+  m_Script: {fileID: 11500000, guid: 2a766c2e4e8c541448f086e344dee163, type: 3}
+  m_Name: FinishEntity
   m_EditorClassIdentifier: 
-  _prefabPath: Entities/Traps/Hole
+  _prefabPath: Entities/Static/Finish
   _customProperties: []

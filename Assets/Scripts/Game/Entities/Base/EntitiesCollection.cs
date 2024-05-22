@@ -33,7 +33,7 @@ public sealed class EntitiesCollection : MonoBehaviour
         if (entityType == EntityType.Void)
             return null;
 
-        Entity entity = _entities.Find(x => x.Type == entityType);
+        Entity entity = _entities.FirstOrDefault(x => x.Type == entityType);
 
         if (entity == null)
         {

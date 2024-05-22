@@ -14,6 +14,7 @@ public sealed class BoardUIManager : MonoBehaviour
 
     private Dictionary<Vector2Int, KeyValuePair<EntityType, GameObject>> _uiMaze = new();
     private GameManager _gameManager;
+    private ToolsUIManager _toolsUI;
 
     private void Awake()
     {
@@ -22,12 +23,15 @@ public sealed class BoardUIManager : MonoBehaviour
 
     private void Start()
     {
-        GameManager.OnMazeDataReceived += CreateBoard;  
+        _toolsUI = DIContainer.Resolve<ToolsUIManager>();
+
+        GameManager.OnMazeDataReceived += CreateBoard;
+
     }
 
-    public void OnRemoveCell(byte row, byte column)
+    public void OnAffectCell(byte row, byte column)
     {
-        OnUIEntityChange?.Invoke(0, row, column);
+        OnUIEntityChange?.Invoke((byte)_toolsUI.CurrentTool, row, column);
     }
     public void RefreshBoard(byte[,] board, bool ignoreNewTypes = false)
     {
@@ -50,7 +54,6 @@ public sealed class BoardUIManager : MonoBehaviour
     {
         byte row = (byte)position.x;
         byte column = (byte)position.y;
-
         Color color = Color.white;
 
         switch (entityType)
@@ -61,19 +64,27 @@ public sealed class BoardUIManager : MonoBehaviour
             case EntityType.Player:
                 color = Color.blue;
                 break;
+            case EntityType.Finish:
+                color = Color.green;
+                break;
+            case EntityType.Hole:
+                color = Color.black;
+                break;
         }
 
-        cell.GetComponent<Button>().onClick.AddListener(() => OnRemoveCell(row, column));
+        cell.GetComponent<Button>().onClick.AddListener(() => OnAffectCell(row, column));
         cell.GetComponent<Image>().color = color;
-        cell.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = row + "," + column + "(" + entityType.ToString() + ")";
+        var textUI = cell.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
+        textUI.color = color == Color.black ? Color.white : Color.black;
+        textUI.text = row + "," + column + "(" + entityType.ToString() + ")";
     }
-
     private void CreateBoard(byte[,] board)
     {
         _boardParent.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        _boardParent.constraintCount = board.GetLength(0) - 1;
+        _boardParent.constraintCount = board.GetLength(0);
 
-        _uiMaze = BoardUIBuilder.Build(board, _boardParent);
+        if (_uiMaze.Count == 0)
+            _uiMaze = BoardUIBuilder.Build(board, _boardParent);
 
         RefreshBoard(board, true);
     }
