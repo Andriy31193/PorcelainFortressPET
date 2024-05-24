@@ -35,6 +35,7 @@ public sealed class GameUIManager : MonoBehaviour
     {
         _winnerNickname.text = nickname;
         _winnerPanel.SetActive(true);
+        _countdownTimerText.gameObject.SetActive(false);
     }
     
     public void SetUITimerValue(string value, Color color)

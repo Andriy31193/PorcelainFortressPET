@@ -21,19 +21,15 @@ public sealed class ToolsUIManager : MonoBehaviour
     private Dictionary<EntityType, Button> _tools;
 
 
-    private void Awake() {
-        DIContainer.Register(this);
-    }
-    private void Start()
-    {
-        Populate();
-    }
+    private void Awake() => DIContainer.Register(this);
+    private void Start() => Populate();
+
 
     private void Populate()
     {
         _tools = ToolsUIBuilder.Build(TOOLS, parent: _parent.transform);
 
-        ProcessTools();
+        SetupTools();
     }
     private void OnToolClick(EntityType toolType)
     {
@@ -41,7 +37,7 @@ public sealed class ToolsUIManager : MonoBehaviour
 
         OnCurrentToolSwitched?.Invoke(CurrentTool);
     }
-    private void ProcessTools()
+    private void SetupTools()
     {
         for (int i = 0; i < _tools.Count; i++)
         {
