@@ -1,6 +1,6 @@
 public static class GameSettings
 {
-    public const int ROUND_TIME = 120;
+    public const int ROUND_TIME = 360;
     public static class Map
     {
         public const uint Rows = 10;

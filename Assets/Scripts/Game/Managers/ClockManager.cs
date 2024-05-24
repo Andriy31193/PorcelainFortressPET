@@ -33,7 +33,7 @@ public sealed class ClockManager : Photon.MonoBehaviour
         {
             if (_clockValue > 0)
             {
-                if (_clockValue <= GameSettings.ROUND_TIME - 10)
+                if (_clockValue <= 10)
                     _gameUIControl.SetUITimerValue(Color.red);
 
                 _clockValue -= Time.deltaTime;
