@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class MazeUtility
+public static class MazeUtils
 {
     public static KeyValuePair<byte, byte> D3PositonMatrix(Vector3 pos)
     {

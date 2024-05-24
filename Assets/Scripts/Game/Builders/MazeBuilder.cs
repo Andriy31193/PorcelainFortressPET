@@ -19,8 +19,6 @@ public class MazeBuilder : Photon.PunBehaviour
     private Dictionary<KeyValuePair<byte, byte>, GameObject> _3dMaze;
     private List<GameObject> _customCreations = new();
 
-    private EntitiesCollection _entitiesCollection;
-
     private void Awake()
     {
         DIContainer.Register(this);
@@ -35,7 +33,6 @@ public class MazeBuilder : Photon.PunBehaviour
     }
     public void Generate(Action<byte[]> onMazeGenerated)
     {
-        _entitiesCollection = DIContainer.Resolve<EntitiesCollection>();
 
         GenerateMaze();
 
@@ -50,6 +47,7 @@ public class MazeBuilder : Photon.PunBehaviour
         _maze = new byte[Map.Rows, Map.Columns];
         GenerateChallenges();
 
+        #region Procdural Generation
         // Vector2Int current = new(0, 0);
         // _stack.Push(current);
         // _maze[current.x, current.y] = (byte)EntityType.Wall;
@@ -82,7 +80,8 @@ public class MazeBuilder : Photon.PunBehaviour
         //         }
         //     }
         // }
-        _maze[9, 1] = (byte)EntityType.Void;
+        #endregion
+
     }
 
     private void GenerateChallenges()
@@ -129,14 +128,12 @@ public class MazeBuilder : Photon.PunBehaviour
     {
         ClearCustomCreations();
 
-        //Buffer.BlockCopy(data, 0, _maze, 0, _maze.Length);
-
         _3dMaze = new Dictionary<KeyValuePair<byte, byte>, GameObject>();
         for (byte row = 0; row < data.GetLength(0); row++)
         {
             for (byte column = 0; column < data.GetLength(1); column++)
             {
-                var entity = HandleCreation((EntityType)data[row, column], MazeUtility.MatrixTo3DPosition(row, column));
+                var entity = HandleCreation((EntityType)data[row, column], MazeUtils.MatrixTo3DPosition(row, column));
 
                 _3dMaze.Add(new KeyValuePair<byte, byte>(row, column), entity);
             }
@@ -170,7 +167,7 @@ public class MazeBuilder : Photon.PunBehaviour
         var key = new KeyValuePair<byte, byte>(row, column);
         if (_3dMaze.TryGetValue(key, out GameObject d3Object))
         {
-            GameObject go = HandleCreation(newEntity, MazeUtility.MatrixTo3DPosition(row, column));
+            GameObject go = HandleCreation(newEntity, MazeUtils.MatrixTo3DPosition(row, column));
 
             if (go != null)
             {
@@ -180,7 +177,6 @@ public class MazeBuilder : Photon.PunBehaviour
                     Destroy(_3dMaze[key]);
             }
 
-            //_maze[row, column] = (byte)newEntity;
             _3dMaze[key] = go;
 
             if (newEntity == EntityType.Void && d3Object != null)

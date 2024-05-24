@@ -6,9 +6,11 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerInteraction))]
 public sealed class PlayerController : Photon.MonoBehaviour, IPlayer
 {
-
+    
     public float moveDistance = 1f;
     public float moveInterval = 1f;
+
+    private string _nickname = string.Empty;
 
     private GameManager _gm;
     private Vector3 _startPosition;
@@ -23,11 +25,17 @@ public sealed class PlayerController : Photon.MonoBehaviour, IPlayer
 
         _startPosition = transform.position;
     }
-
+    public void SetNickname(string value)
+    {
+        _nickname = value;
+        PhotonNetwork.playerName = _nickname;
+    }
+    public string GetNickname() => _nickname;
     public void StartMovement()
     {
         InvokeRepeating(nameof(TryMoveForward), moveInterval, moveInterval);
     }
+    
     public void ResetMovement()
     {
         StopMovement();
@@ -41,17 +49,7 @@ public sealed class PlayerController : Photon.MonoBehaviour, IPlayer
     }
     public void Finish()
     {
-        photonView.RPC(nameof(ProcessWinner), PhotonTargets.All);
-        Debug.Log("I WON!");
-    }
-    /// <summary>
-    /// Temporary solution
-    /// </summary>
-    [PunRPC]
-    public void ProcessWinner()
-    {
-        Debug.Log("WINNER IS SELECTED");
-        this.StopMovement();
+        GameManager.OnSelectWinner?.Invoke(this);
     }
     private void TryMoveForward()
     {
@@ -67,15 +65,15 @@ public sealed class PlayerController : Photon.MonoBehaviour, IPlayer
         }
     }
 
-    public void ChangeDirection(Direction newDirection)
+    public void ChangeDirection(DirectionType newDirection)
     {
         Debug.Log(newDirection.ToString());
         switch(newDirection)
         {
-            case Direction.Left:
+            case DirectionType.Left:
             transform.Rotate(0,-90,0);
             break;
-            case Direction.Right:
+            case DirectionType.Right:
             transform.Rotate(0,90,0);
             break;
         }
@@ -89,5 +87,4 @@ public sealed class PlayerController : Photon.MonoBehaviour, IPlayer
     private void OnDestroy()
     {
     }
-
 }

@@ -12,7 +12,7 @@ public sealed class ClockManager : Photon.MonoBehaviour
     private double _clockValue;
     private bool _clockReady = false;
 
-    private GameUIControl _gameUIControl;
+    private GameUIManager _gameUIControl;
     private GameStatus _gameStatus;
 
     private void Awake() {
@@ -21,8 +21,11 @@ public sealed class ClockManager : Photon.MonoBehaviour
     }
     private void Start()
     {
-        _gameUIControl = DIContainer.Resolve<GameUIControl>();
+        _gameUIControl = DIContainer.Resolve<GameUIManager>();
 
+    }
+    private void OnDestroy() {
+        GameManager.OnGameStatusChanged -= OnGameStatusChanged;
     }
     private void Update()
     {
@@ -31,15 +34,15 @@ public sealed class ClockManager : Photon.MonoBehaviour
             if (_clockValue > 0)
             {
                 if (_clockValue <= GameSettings.ROUND_TIME - 10)
-                    _gameUIControl.SetTimerValue(Color.red);
+                    _gameUIControl.SetUITimerValue(Color.red);
 
                 _clockValue -= Time.deltaTime;
 
-                _gameUIControl.SetTimerValue(string.Format("{0:00}:{1:00}", (int)Mathf.Floor((float)_clockValue / 60), (int)Mathf.Floor((float)_clockValue % 60)));
+                _gameUIControl.SetUITimerValue(string.Format("{0:00}:{1:00}", (int)Mathf.Floor((float)_clockValue / 60), (int)Mathf.Floor((float)_clockValue % 60)));
             }
             else
             {
-                _gameUIControl.SetTimerValue("--:--");
+                _gameUIControl.SetUITimerValue("--:--");
 
                 OnTimeUp?.Invoke();
             }
@@ -48,7 +51,7 @@ public sealed class ClockManager : Photon.MonoBehaviour
     public void StartClock()
     {
         _clockValue = GameSettings.ROUND_TIME;
-        _gameUIControl.SetTimerValue(Color.white);
+        _gameUIControl.SetUITimerValue(Color.white);
 
         StartCoroutine(IESetGlobalTime());
         StartCoroutine(IEUpdateServerTime());

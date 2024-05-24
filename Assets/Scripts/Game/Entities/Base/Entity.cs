@@ -12,8 +12,5 @@ public abstract class Entity : ScriptableObject
 
     public string GetPrefabPath() => _prefabPath; 
 
-    
-    
-    
     public abstract void Affect(IPlayer player);
 }

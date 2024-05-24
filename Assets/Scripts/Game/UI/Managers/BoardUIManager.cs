@@ -19,14 +19,17 @@ public sealed class BoardUIManager : MonoBehaviour
     private void Awake()
     {
         DIContainer.Register(this);
+        GameManager.OnMazeDataReceived += CreateBoard;
     }
 
     private void Start()
     {
         _toolsUI = DIContainer.Resolve<ToolsUIManager>();
 
-        GameManager.OnMazeDataReceived += CreateBoard;
 
+    }
+    private void OnDestroy() {
+        GameManager.OnMazeDataReceived -= CreateBoard;
     }
 
     public void OnAffectCell(byte row, byte column)

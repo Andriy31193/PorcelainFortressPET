@@ -8,6 +8,6 @@ public sealed class DirectionLeftEntity : Entity
 
     public override void Affect(IPlayer player)
     {
-        player.ChangeDirection(Direction.Left);
+        player.ChangeDirection(DirectionType.Left);
     }
 }

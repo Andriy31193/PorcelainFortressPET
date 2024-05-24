@@ -50,4 +50,5 @@ MonoBehaviour:
   - OnReceiveMazeData
   - UpdateServerTimeRPC
   - ProcessWinner
+  - SelectWinnerRPC
   DisableAutoOpenWizard: 1
